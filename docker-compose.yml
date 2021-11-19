@@ -1,0 +1,40 @@
+version: "2.2"
+
+services:
+  mongo:
+    image: mongo:4.4.9
+    container_name: knox_mongo
+    #    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./data/mongo:/data/db:rw
+      - ./init:/docker-entrypoint-initdb.d
+
+  knox:
+    image: node:latest
+    working_dir: /app
+    command: npm start
+    environment:
+      DB_HOST: mongo
+      DB_USER: content
+      DB_PASSWORD: example
+      CACHE_PATH: cache
+    links:
+      - mongo
+      - cache
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+
+  cache:
+    image: redis:alpine
+    container_name: knox_cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis:/data/
