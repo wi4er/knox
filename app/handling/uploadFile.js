@@ -1,11 +1,12 @@
 const multer = require("multer");
+const path = require("path");
 
 const storageConfig = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, "storage");
+        cb(null, process.env.STORAGE_PATH || "app/storage/files");
     },
     filename: (req, file, cb) => {
-        cb(null, `${new Date().getTime()}.${file.originalname.split('.').pop()}`);
+        cb(null, `${new Date().getTime()}_${file.originalname.split(' ').join('_')}`);
     }
 });
 

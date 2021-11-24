@@ -1,18 +1,18 @@
-const app = require('.');
+const app = require('./index');
 const request = require('supertest');
 const fs = require("fs");
 const mongoose = require("mongoose");
 const Permission = require("../model/Permission");
 const jwt = require("jsonwebtoken");
 
-afterEach(() => require("../connection").clearDatabase().catch(err => console.log(err)));
-afterEach(() => require("../cleaner/fileCleaner").clearAllFiles("./storage"));
+afterEach(() => require("../model").clearDatabase().catch(err => console.log(err)));
+afterEach(() => require("../cleaner/fileCleaner").clearAllFiles(process.env.STORAGE_PATH || "app/storage/files"));
 
 /**
  * @TODO rewrite to endpoint
  */
-beforeAll(() => require("../connection").connect());
-afterAll(() => require("../connection").disconnect());
+beforeAll(() => require("../model").connect());
+afterAll(() => require("../model").disconnect());
 
 describe("File entity", function () {
     describe("Getting items", () => {
@@ -246,7 +246,7 @@ describe("File entity", function () {
                 .field("name", "New file")
                 .attach("file", buffer, "newFile.text")
 
-            await expect(fs.promises.readFile(`./${path}`, "utf8")).rejects.toThrow();
+            await expect(fs.promises.readFile(`app/${path}`, "utf8")).rejects.toThrow();
 
         });
 

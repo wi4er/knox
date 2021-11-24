@@ -1,19 +1,19 @@
 const {Router} = require("express");
 const router = Router();
-const File = require("../model/File");
+const Image = require("../model/Image");
 const WrongIdError = require("../exception/WrongIdError");
-const {FILE} = require("../permission/entity");
+const {IMAGE, PUBLIC} = require("../permission/entity");
 const {GET, POST, PUT, DELETE} = require("../permission/method");
-const upload = require('../handling/uploadFile');
+const upload = require('../handling/uploadImage');
 const filesQuery = require('../query/filesQuery')
 const permissionCheck = require("../check/permissionCheck");
 const cleaner = require("../cleaner/fileCleaner");
 
 router.get(
     "/",
-    permissionCheck(FILE, GET),
+    permissionCheck([IMAGE, PUBLIC], GET),
     (req, res, next) => {
-        File.find(
+        Image.find(
             filesQuery.parseFilter(req.query.filter)
         )
             .then(result => res.send(result))
@@ -23,11 +23,11 @@ router.get(
 
 router.get(
     "/:id/",
-    permissionCheck(FILE, GET),
+    permissionCheck([IMAGE, PUBLIC], GET),
     (req, res, next) => {
         const {params: {id}} = req;
 
-        File.findById(id)
+        Image.findById(id)
             .then(result => {
                 WrongIdError.assert(result, `Cant find file with id ${id}!`);
 
@@ -39,11 +39,10 @@ router.get(
 
 router.post(
     "/",
-    permissionCheck(FILE, POST),
+    permissionCheck([IMAGE, PUBLIC], POST),
     upload,
     (req, res, next) => {
-
-        new File({
+        new Image({
             ...req.body,
             path: req.file?.path,
             original: req.file?.originalname,
@@ -59,13 +58,13 @@ router.post(
 
 router.put("/:id/",
     upload,
-    permissionCheck(FILE, PUT),
+    permissionCheck([IMAGE, PUBLIC], PUT),
     (req, res, next) => {
         const {params: {id}} = req;
 
-        File.findById(id)
+        Image.findById(id)
             .then(result => {
-                WrongIdError.assert(result, `Cant update file with id ${id}!`);
+                WrongIdError.assert(result, `Cant update image with id ${id}!`);
 
                 cleaner.clearFile(result);
 
@@ -84,13 +83,13 @@ router.put("/:id/",
 
 router.delete(
     "/:id/",
-    permissionCheck(FILE, DELETE),
+    permissionCheck([IMAGE, PUBLIC], DELETE),
     (req, res, next) => {
         const {params: {id}} = req;
 
-        File.findById(id)
+        Image.findById(id)
             .then(result => {
-                WrongIdError.assert(result, `Cant delete file with id ${id}!`);
+                WrongIdError.assert(result, `Cant delete image with id ${id}!`);
 
                 cleaner.clearFile(result)
 

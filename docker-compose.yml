@@ -16,12 +16,14 @@ services:
 
   knox:
     image: node:latest
+    container_name: knox_api
     working_dir: /app
     command: npm start
     environment:
       DB_HOST: mongo
-      DB_USER: content
+      DB_USER: knox
       DB_PASSWORD: example
+      STORAGE_PATH: app/storage
       CACHE_PATH: cache
     links:
       - mongo

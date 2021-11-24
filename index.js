@@ -1,7 +1,7 @@
 const port = process.env.PORT || 8081;
 const chalk = require("chalk");
 
-require("./view").listen(port, err => {
+require("./app").listen(port, err => {
     if (err) {
         console.log(chalk.bgRed(err));
     } else {
