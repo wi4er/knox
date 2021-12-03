@@ -1,1 +1,1 @@
-module.exports = class WrongRefError extends require("./GrootError") {}
+module.exports = class WrongRefError extends require("./KnoxError") {}

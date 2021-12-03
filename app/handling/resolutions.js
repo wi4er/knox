@@ -1,18 +1,18 @@
 module.exports = [
     {
-        name: 'QVGA',
-        size: [320, 240]
+        type: 'QVGA',
+        size: [320, null]
     },
     {
-        name: 'nHD',
-        size: [640, 360]
+        type: 'nHD',
+        size: [640, null]
     },
     {
-        name: 'SVGA',
-        size: [800, 600]
+        type: 'SVGA',
+        size: [800, null]
     },
     {
-        name: 'XGA',
-        size: [1024, 768]
+        type: 'XGA',
+        size: [1024, null]
     },
 ];

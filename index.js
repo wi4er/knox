@@ -1,10 +1,10 @@
-const port = process.env.PORT || 8081;
+const env = require("./environment")
 const chalk = require("chalk");
 
-require("./app").listen(port, err => {
+require("./app").listen(env.PORT, err => {
     if (err) {
         console.log(chalk.bgRed(err));
     } else {
-        console.log(chalk.greenBright(`>>> Server starts at ${port} >>>>`));
+        console.log(chalk.greenBright(`>>> Server starts at ${env.PORT} >>>>`));
     }
 });

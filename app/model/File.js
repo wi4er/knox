@@ -7,10 +7,7 @@ const FileSchema = new mongoose.Schema({
     },
     timestamp: Date,
     original: String,
-    path: {
-        type: String,
-        required: true
-    },
+    filename: String,
     size: String,
     mimetype: String,
 });

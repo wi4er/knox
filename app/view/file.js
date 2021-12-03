@@ -42,11 +42,10 @@ router.post(
     permissionCheck([FILE, PUBLIC], POST),
     upload,
     (req, res, next) => {
-
         new File({
             ...req.body,
-            path: req.file?.path,
             original: req.file?.originalname,
+            filename: req.file.filename,
             size: req.file?.size,
             mimetype: req.file?.mimetype,
         }).save()
@@ -71,8 +70,8 @@ router.put("/:id/",
 
                 return Object.assign(result, {
                     ...req.body,
-                    path: req.file?.path,
                     original: req.file?.originalname,
+                    filename: req.file.filename,
                     size: req.file?.size,
                     mimetype: req.file?.mimetype,
                 }).save();

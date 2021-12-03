@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const env = require("../../environment");
 
 class Model {
     connection = null;
@@ -13,30 +14,30 @@ class Model {
     }
 
     getConnectionUrl() {
-        if (process.env.DB_URL) {
-            return process.env.DB_URL;
+        if (env.DB_URL) {
+            return env.DB_URL;
         }
 
         return [
             "mongodb://",
-            process.env.DB_USER || "knox",
+            env.DB_USER,
             ":",
-            process.env.DB_PASSWORD || "example",
+            env.DB_PASSWORD,
             "@",
-            process.env.DB_HOST || "127.0.0.1",
+            env.DB_HOST,
             ":",
-            process.env.DB_PORT || "27017",
+            env.DB_PORT,
             "/",
-            process.env.DB_NAME || "knox"
+            env.DB_NAME
         ].join("");
     }
 
     getConnectionOptions() {
         const options = {};
 
-        if (process.env.USE_SSL) {
+        if (env.USE_SSL) {
             options.ssl = true;
-            options.sslCA = process.env.USE_SSL;
+            options.sslCA = env.USE_SSL;
         }
 
         return options;

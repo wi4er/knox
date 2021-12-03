@@ -1,9 +1,16 @@
 const multer = require("multer");
-const path = require("path");
+const env = require("../../environment");
+const fs = require("fs");
 
 const storageConfig = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, process.env.STORAGE_PATH || "app/storage/files");
+    destination: (req, file, cb, err) => {
+        if(err) {
+            cb(null, false)
+        }
+        if (!fs.existsSync(env.STORAGE_PATH)) {
+            fs.mkdirSync(env.STORAGE_PATH);
+        }
+        cb(null, env.STORAGE_PATH);
     },
     filename: (req, file, cb) => {
         cb(null, `${new Date().getTime()}_${file.originalname.split(' ').join('_')}`);

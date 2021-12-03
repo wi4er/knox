@@ -1,13 +1,14 @@
-const app = require('./index');
+const app = require('../index.js');
 const request = require('supertest');
 const fs = require("fs");
 const mongoose = require("mongoose");
 const Permission = require("../model/Permission");
 const jwt = require("jsonwebtoken");
+const path = require("path");
+const STORAGE = require("../../environment").STORAGE_PATH;
 
 afterEach(() => require("../model").clearDatabase().catch(err => console.log(err)));
-afterEach(() => require("../cleaner/fileCleaner").clearAllFiles(process.env.STORAGE_PATH || "app/storage/files"));
-
+afterEach(() => require("../cleaner/fileCleaner").clearAllFiles(STORAGE));
 /**
  * @TODO rewrite to endpoint
  */
@@ -27,13 +28,11 @@ describe("File entity", function () {
         });
 
         test("Should get an item with id", async () => {
-            const buffer = Buffer.from('some data');
-
             const id = await request(app)
                 .post("/file/")
                 .set(...require("./mock/auth"))
                 .field("name", "Tomato")
-                .attach("file", buffer, "image.text")
+                .attach("file", Buffer.from('some data'), "image.text")
                 .expect(201)
                 .then(res => res.body._id)
 
@@ -42,7 +41,6 @@ describe("File entity", function () {
                 .set(...require("./mock/auth"))
                 .expect(200)
                 .then(res => {
-                    console.log(res.text)
                     expect(res.body.name).toBe('Tomato');
                     expect(res.body.original).toBe('image.text');
                 });
@@ -102,7 +100,7 @@ describe("File entity", function () {
                 .expect(404);
         });
 
-        test("Should get CastError with random id. ", async () => {
+        test("Should get CastError with random id", async () => {
             await request(app)
                 .get(`/file/123/`)
                 .set(...require("./mock/auth"))
@@ -118,30 +116,30 @@ describe("File entity", function () {
 
     describe("Adding items", () => {
         test("Should add item to mongo", async () => {
-            const buffer = Buffer.from('some data');
-
             await request(app)
                 .post("/file/")
                 .set(...require("./mock/auth"))
                 .field("name", "Tomato")
-                .attach("file", buffer, "image.text")
+                .attach("file", Buffer.from('some data'), "image.text")
                 .expect(201)
                 .then(res => {
                     expect(res.body.name).toBe('Tomato');
+                    expect(res.body.original).toBe("image.text");
+                    expect(res.body.filename).toContain(`${res.body.original}`);
+                    expect(res.body.size).toBe('9');
+                    expect(res.body.mimetype).toBe('text/plain');
                 });
         });
 
         test("Should save file", async () => {
-            const buffer = Buffer.from('some data');
-
-            const path = await request(app)
+            const filename = await request(app)
                 .post("/file/")
                 .set(...require("./mock/auth"))
                 .field("name", "Tomato")
-                .attach("file", buffer, "image.text")
-                .then(res => res.body.path)
+                .attach("file", Buffer.from('some data'), "image.text")
+                .then(res => res.body.filename)
 
-            const file = await fs.promises.readFile(`./${path}`, "utf8")
+            const file = await fs.promises.readFile(path.resolve(`${STORAGE}${filename}`), "utf8")
 
             expect(file).toBe('some data');
         });
@@ -168,14 +166,14 @@ describe("File entity", function () {
                 .set(...require("./mock/auth"))
                 .field("name", "Tomato")
                 .attach("file", Buffer.from('OLD DATA'), "data.text")
-                .then(res => res.body.path)
+                .then(res => res.body.filename)
 
             const newFile = await request(app)
                 .post("/file/")
                 .set(...require("./mock/auth"))
                 .field("name", "Tomato")
                 .attach("file", Buffer.from('NEW NEW'), "data.text")
-                .then(res => res.body.path)
+                .then(res => res.body.filename)
 
             expect(oldFile).not.toBe(newFile)
         });
@@ -193,88 +191,190 @@ describe("File entity", function () {
                 .post("/file/")
                 .expect(403)
         });
+
+        test("Should post with permission", async () => {
+            const user = [
+                "authorization",
+                `Bearer ${jwt.sign(
+                    {id: "000122333444455555666666", group: 1},
+                    "hello world !",
+                    {algorithm: 'HS256'}
+                )}`
+            ];
+
+            await new Permission({
+                entity: "FILE",
+                method: "POST",
+                group: 1
+            }).save();
+
+            await request(app)
+                .post("/file/")
+                .set(...user)
+                .field("name", "Tomato")
+                .attach("file", Buffer.from('some data'), "image.text")
+                .expect(201)
+        });
+
+        test("Shouldn't post with wrong permission", async () => {
+            const user = [
+                "authorization",
+                `Bearer ${jwt.sign(
+                    {id: "000122333444455555666666", group: 1},
+                    "hello world !",
+                    {algorithm: 'HS256'}
+                )}`
+            ];
+
+            await new Permission({
+                entity: "FILE",
+                method: "POST",
+                group: 2
+            }).save();
+
+            await request(app)
+                .post("/file/")
+                .set(...user)
+                .field("name", "Tomato")
+                .attach("file", Buffer.from('some data'), "image.text")
+                .expect(403)
+        });
     });
 
     describe("Updating items", () => {
         test("Should update item by id", async () => {
-            const buffer = Buffer.from('some data');
-            let id;
-
-            await request(app)
+            const posted = await request(app)
                 .post("/file/")
                 .set(...require("./mock/auth"))
                 .field("name", "Tomato")
-                .attach("file", buffer, "image.text")
-                .expect(201)
-                .then(res => {
-                    id = res.body._id;
+                .attach("file", Buffer.from('some data'), "image.text")
 
-                    expect(res.body._id).toEqual(id);
-                    expect(res.body.name).toBe('Tomato')
-                })
-
-            await request(app)
-                .put(`/file/${id}/`)
+            const updated = await request(app)
+                .put(`/file/${posted.body._id}/`)
                 .set(...require("./mock/auth"))
                 .field("name", "Tomato juice")
-                .attach("file", buffer, "tomato.text")
+                .attach("file", Buffer.from('some data'), "tomato.text")
                 .expect(200)
-                .then(res => {
-                    expect(res.body._id).toEqual(id);
-                    expect(res.body.name).toBe('Tomato juice')
-                })
+
+            expect(posted.body.name).toBe("Tomato");
+            expect(updated.body.name).toBe("Tomato juice");
+            expect(posted.body._id).toEqual(updated.body._id);
         });
 
-        test("Should remove updated file from disk", async () => {
-            const buffer = Buffer.from('some data');
-
-            const id = await request(app)
+        test("Should replace files on disk", async () => {
+            const oldFile = await request(app)
                 .post("/file/")
                 .set(...require("./mock/auth"))
                 .field("name", "Tomato")
-                .attach("file", buffer, "image.text")
-                .then(res => res.body._id)
+                .attach("file", Buffer.from('some data'), "image.text")
 
-            const path = await request(app)
-                .get(`/file/${id}/`)
-                .set(...require("./mock/auth"))
-                .then(res => res.body.path)
+            await expect(fs.promises.readFile(`${STORAGE}${oldFile.body.filename}`, "utf8")).toBeDefined();
 
-            await request(app)
-                .put(`/file/${id}/`)
+            const newFile = await request(app)
+                .put(`/file/${oldFile.body._id}/`)
                 .set(...require("./mock/auth"))
                 .field("name", "New file")
-                .attach("file", buffer, "newFile.text")
+                .attach("file", Buffer.from('some data'), "newFile.text")
 
-            await expect(fs.promises.readFile(`app/${path}`, "utf8")).rejects.toThrow();
-
+            await expect(fs.promises.readFile(`${STORAGE}${newFile.body.filename}`, "utf8")).toBeDefined();
+            await expect(fs.promises.readFile(`${STORAGE}${oldFile.body.filename}`, "utf8")).rejects.toThrow();
         });
 
         test("Should forbid updating without authorization", async () => {
-            const buffer = Buffer.from('some data');
-
             const id = await request(app)
                 .post("/file/")
                 .set(...require("./mock/auth"))
                 .field("name", "Tomato")
-                .attach("file", buffer, "image.text")
+                .attach("file", Buffer.from('some data'), "image.text")
                 .then(res => res.body._id)
 
             await request(app)
                 .put(`/file/${id}`)
                 .expect(403)
         });
+
+        test("Should update posted file with permission", async () => {
+            const user = [
+                "authorization",
+                `Bearer ${jwt.sign(
+                    {id: "000122333444455555666666", group: 1},
+                    "hello world !",
+                    {algorithm: 'HS256'}
+                )}`
+            ];
+
+            await new Permission({
+                entity: "FILE",
+                method: "POST",
+                group: 1
+            }).save();
+
+            const id = await request(app)
+                .post("/file/")
+                .set(...user)
+                .field("name", "Tomato")
+                .attach("file", Buffer.from('some data'), "image.text")
+                .then(res => res.body._id)
+
+            await new Permission({
+                entity: "FILE",
+                method: "PUT",
+                group: 1
+            }).save();
+
+            await request(app)
+                .put(`/file/${id}/`)
+                .set(...user)
+                .field("name", "New file")
+                .attach("file", Buffer.from('some data'), "newFile.text")
+                .expect(200)
+        });
+
+        test("Shouldn't update with wrong permission", async () => {
+            const user = [
+                "authorization",
+                `Bearer ${jwt.sign(
+                    {id: "000122333444455555666666", group: 1},
+                    "hello world !",
+                    {algorithm: 'HS256'}
+                )}`
+            ];
+
+            await new Permission({
+                entity: "FILE",
+                method: "POST",
+                group: 1
+            }).save();
+
+            const id = await request(app)
+                .post("/file/")
+                .set(...user)
+                .field("name", "Tomato")
+                .attach("file", Buffer.from('some data'), "image.text")
+                .then(res => res.body._id)
+
+            await new Permission({
+                entity: "FILE",
+                method: "PUT",
+                group: 2
+            }).save();
+
+            await request(app)
+                .put(`/file/${id}/`)
+                .set(...user)
+                .field("name", "New file")
+                .attach("file", Buffer.from('some data'), "newFile.text")
+                .expect(403)
+        });
     });
 
     describe("Deleting items", () => {
         test("Should delete item", async () => {
-            const buffer = Buffer.from('some data');
-
             const id = await request(app)
                 .post("/file/")
                 .set(...require("./mock/auth"))
                 .field("name", "Tomato")
-                .attach("file", buffer, "image.text")
+                .attach("file", Buffer.from('some data'), "image.text")
                 .expect(201)
                 .then(res => res.body._id)
 
@@ -288,39 +388,105 @@ describe("File entity", function () {
         });
 
         test("Should delete file from disk", async () => {
-            const buffer = Buffer.from('some data');
-
             const id = await request(app)
                 .post("/file/")
                 .set(...require("./mock/auth"))
                 .field("name", "Tomato")
-                .attach("file", buffer, "image.text")
+                .attach("file", Buffer.from('some data'), "image.text")
                 .then(res => res.body._id)
 
-            const path = await request(app)
+            const filename = await request(app)
                 .get(`/file/${id}/`)
                 .set(...require("./mock/auth"))
-                .then(res => res.body.path)
+                .then(res => res.body.filename)
 
             await request(app)
                 .delete(`/file/${id}/`)
                 .set(...require("./mock/auth"))
 
-            await expect(fs.promises.readFile(`./${path}`, "utf8")).rejects.toThrow();
+            await expect(fs.promises.readFile(`${STORAGE}${filename}`, "utf8")).rejects.toThrow();
         });
 
         test("Should forbid deleting without authorization", async () => {
-            const buffer = Buffer.from('some data');
-
             const id = await request(app)
                 .post("/file/")
                 .set(...require("./mock/auth"))
                 .field("name", "Tomato")
-                .attach("file", buffer, "image.text")
+                .attach("file", Buffer.from('some data'), "image.text")
                 .then(res => res.body._id)
 
             await request(app)
                 .delete(`/file/${id}`)
+                .expect(403)
+        });
+
+        test("Should delete posted file with permission", async () => {
+            const user = [
+                "authorization",
+                `Bearer ${jwt.sign(
+                    {id: "000122333444455555666666", group: 1},
+                    "hello world !",
+                    {algorithm: 'HS256'}
+                )}`
+            ];
+
+            await new Permission({
+                entity: "FILE",
+                method: "POST",
+                group: 1
+            }).save();
+
+            const id = await request(app)
+                .post("/file/")
+                .set(...user)
+                .field("name", "Tomato")
+                .attach("file", Buffer.from('some data'), "image.text")
+                .then(res => res.body._id)
+
+            await new Permission({
+                entity: "FILE",
+                method: "DELETE",
+                group: 1
+            }).save();
+
+            await request(app)
+                .delete(`/file/${id}/`)
+                .set(...user)
+                .expect(200)
+        });
+
+        test("Shouldn't delete posted file with wrong permission", async () => {
+            const user = [
+                "authorization",
+                `Bearer ${jwt.sign(
+                    {id: "000122333444455555666666", group: 1},
+                    "hello world !",
+                    {algorithm: 'HS256'}
+                )}`
+            ];
+
+            await new Permission({
+                entity: "FILE",
+                method: "POST",
+                group: 1
+            }).save();
+
+            const id = await request(app)
+                .post("/file/")
+                .set(...user)
+                .field("name", "Tomato")
+                .attach("file", Buffer.from('some data'), "image.text")
+                .then(res => res.body._id)
+
+            await new Permission({
+                entity: "FILE",
+                method: "DELETE",
+                group: 2
+            }).save();
+
+            await request(app)
+                .delete(`/file/${id}/`)
+                .set(...user)
                 .expect(403)
         });
     });

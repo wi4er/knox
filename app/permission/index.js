@@ -1,5 +1,5 @@
 module.exports = require('express-jwt')({
-    secret: process.env.SECRET || 'hello world !',
+    secret: require("../../environment").SECRET,
     algorithms: ['HS256'],
     credentialsRequired: false,
 });
