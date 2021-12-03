@@ -50,7 +50,9 @@ router.post(
             mimetype: req.file?.mimetype,
         }).save()
             .then(result => {
-                res.status(201).json(result);
+                res
+                    .status(201)
+                    .json(result);
             })
             .catch(next);
     }

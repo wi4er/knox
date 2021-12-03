@@ -4,12 +4,14 @@ const fs = require("fs");
 
 const storageConfig = multer.diskStorage({
     destination: (req, file, cb, err) => {
-        if(err) {
-            cb(null, false)
+        if (err) {
+            cb(null, false);
         }
+
         if (!fs.existsSync(env.STORAGE_PATH)) {
             fs.mkdirSync(env.STORAGE_PATH);
         }
+
         cb(null, env.STORAGE_PATH);
     },
     filename: (req, file, cb) => {
