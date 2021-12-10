@@ -4,7 +4,7 @@ const File = require("../model/File");
 const WrongIdError = require("../exception/WrongIdError");
 const {FILE, PUBLIC} = require("../permission/entity");
 const {GET, POST, PUT, DELETE} = require("../permission/method");
-const upload = require('../handling/uploadFile');
+const loadFIle = require('../handling/uploadFile');
 const filesQuery = require('../query/filesQuery')
 const permissionCheck = require("../check/permissionCheck");
 const cleaner = require("../cleaner/fileCleaner");
@@ -40,7 +40,7 @@ router.get(
 router.post(
     "/",
     permissionCheck([FILE, PUBLIC], POST),
-    upload,
+    loadFIle.single('file'),
     (req, res, next) => {
         new File({
             ...req.body,
@@ -50,14 +50,14 @@ router.post(
             mimetype: req.file?.mimetype,
         }).save()
             .then(result => {
-                res.status(201).json(result);
+                res.status(201).send(result);
             })
             .catch(next);
     }
 );
 
 router.put("/:id/",
-    upload,
+    loadFIle.single('file'),
     permissionCheck([FILE, PUBLIC], PUT),
     (req, res, next) => {
         const {params: {id}} = req;

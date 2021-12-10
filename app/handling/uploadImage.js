@@ -1,35 +1,37 @@
 const multer = require("multer");
-const env = require("../../environment");
-const fs = require("fs");
+const STORAGE = require("../../environment").STORAGE_PATH;
 const FileTypeError = require("../exception/FileTypeError");
+const createFolder = require('./createFolder');
+const renameImage = require('./renameItem');
 
 const storageConfig = multer.diskStorage({
-    destination: (req, file, cb, err) => {
-        if(err) {
-            cb(null, false)
+    destination: (req, file, callback, err) => {
+        if (err) {
+            callback(null, false)
         }
-        if (!fs.existsSync(env.STORAGE_PATH)) {
-            fs.mkdirSync(env.STORAGE_PATH);
-        }
-        cb(null, env.STORAGE_PATH);
+
+        createFolder(STORAGE)
+
+        callback(null, STORAGE);
     },
-    filename: (req, file, cb) => {
-        cb(null, `${new Date().getTime()}_${file.originalname.split(' ').join('_')}`);
+
+    filename: (req, file, callback) => {
+        callback(null, renameImage(file.originalname));
     }
 });
 
-const imageFilter = (req, file, cb) => {
+const imageFilter = (req, file, callback) => {
     if (file.mimetype.includes('image')) {
-        cb(null, true);
+        callback(null, true);
     } else {
-        cb(null, false);
-        return cb(new FileTypeError("Only images allowed!"));
+        callback(null, false);
+        return callback(new FileTypeError("Only images allowed!"));
     }
 };
 
 const uploadImage = multer({
     storage: storageConfig,
-    fileFilter: imageFilter
+    fileFilter: imageFilter,
 });
 
-module.exports = uploadImage.single('image');
+module.exports = uploadImage;

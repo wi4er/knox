@@ -1,24 +1,26 @@
 const multer = require("multer");
-const env = require("../../environment");
-const fs = require("fs");
+const STORAGE = require("../../environment").STORAGE_PATH;
+const createFolder = require('./createFolder');
+const renameFile = require('./renameItem');
 
 const storageConfig = multer.diskStorage({
-    destination: (req, file, cb, err) => {
-        if(err) {
-            cb(null, false)
+    destination: (req, file, callback, err) => {
+        if (err) {
+            callback(null, false)
         }
-        if (!fs.existsSync(env.STORAGE_PATH)) {
-            fs.mkdirSync(env.STORAGE_PATH);
-        }
-        cb(null, env.STORAGE_PATH);
+
+        createFolder(STORAGE);
+
+        callback(null, STORAGE);
     },
-    filename: (req, file, cb) => {
-        cb(null, `${new Date().getTime()}_${file.originalname.split(' ').join('_')}`);
+
+    filename: (req, file, callback) => {
+        callback(null, renameFile(file.originalname));
     }
 });
 
 const uploadFile = multer({
-    storage: storageConfig
+    storage: storageConfig,
 })
 
-module.exports = uploadFile.single('file');
+module.exports = uploadFile;

@@ -136,10 +136,10 @@ describe("Upload files", function () {
                 .attach("image", Buffer.from('some data'), "image.jpg")
                 .then(res => res.body.filename)
 
-                // await request(app)
-                //     .get(`/upload/nHD/${image}`)
-                //     .set(...require("./mock/auth.js"))
-                //     .then(res => res.statusCode)
+                await request(app)
+                    .get(`/upload/nHD/${image}`)
+                    .set(...require("./mock/auth.js"))
+                    .then(res => res.statusCode)
 
         });
 
