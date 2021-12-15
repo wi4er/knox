@@ -8,6 +8,7 @@ const path = require("path");
 const fs = require("fs");
 const sharp = require("sharp");
 const STORAGE = require("../../environment").STORAGE_PATH;
+const createFolder = require("../handling/createFolder");
 
 router.get(
     "/:name/",
@@ -21,7 +22,8 @@ router.get(
                 res.sendFile(files[0], {root: STORAGE});
             })
             .catch(err => {
-                console.log(err)
+                console.log(err);
+                next();
             })
     });
 
@@ -31,33 +33,26 @@ router.get(
     async (req, res, next) => {
         const {params: {type, name}} = req;
 
-        fs.access(path.resolve(STORAGE, name), error => {
-            if (!error) {
+        fs.promises.readdir(STORAGE)
+            .then(files => {
+                return files.filter(f => f === name);
+            })
+            .then(() => {
                 const [item] = resolutions.filter(i => i.type === type);
+                const subDir = item.type ? STORAGE + item.type : null;
 
-                /** Check request and existing size type **/
-                if (type === item?.type) {
-                    const subDir = STORAGE + '/' + item?.type;
+                createFolder(subDir);
 
-                    /** Create a subdirectory **/
-                    if (!fs.existsSync(subDir)) {
-                        fs.mkdirSync(subDir)
-                    }
-
-                    /** Resize file with given parameters **/
-
-                    sharp(path.resolve(STORAGE, name))
-                        .resize(200, 200)
-                        .toFile(path.resolve(subDir, name), (err, info) => {
-                            if (err) throw err;
-                            res.download(path.resolve(subDir, name), (err) => {
-                                if (err) throw err;
-                            });
-                        })
-
-                } else next();
-            }
-        });
+                sharp(path.resolve(STORAGE, name))
+                    .resize(...item?.size)
+                    .toFile(path.resolve(subDir, name), () => {
+                        res.download(path.resolve(subDir, name));
+                    })
+            })
+            .catch(err => {
+                console.log(err);
+                next()
+            });
     });
 
 module.exports = router;

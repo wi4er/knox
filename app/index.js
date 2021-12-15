@@ -1,6 +1,5 @@
 const express = require("express");
 const app = express();
-const STORAGE = require("../environment").STORAGE_PATH;
 
 app.use(require("cors")({}));
 app.use(require('body-parser').json());

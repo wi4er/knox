@@ -128,6 +128,10 @@ describe("Upload files", function () {
     });
 
     describe("Resizing uploads", () => {
+        test("Should add accessible folder", async () => {
+
+        })
+
         test("Should resize an image", async () => {
             const image = await request(app)
                 .post("/image/")
@@ -136,10 +140,12 @@ describe("Upload files", function () {
                 .attach("image", Buffer.from('some data'), "image.jpg")
                 .then(res => res.body.filename)
 
+            console.log(image)
+
                 await request(app)
                     .get(`/upload/nHD/${image}`)
                     .set(...require("./mock/auth.js"))
-                    .then(res => res.statusCode)
+                    .then(res => res.body)
 
         });
 

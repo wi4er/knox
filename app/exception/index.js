@@ -15,7 +15,7 @@ module.exports = (err, req, res, next) => {
         }
 
         case TypeError: {
-            res.status(400).send(err.message);
+            res.status(404).send(err.message);
 
             break;
         }
